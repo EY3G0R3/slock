@@ -18,3 +18,12 @@ static const int runonce = 0;
 static const int timeoffset = 180;
 /* command to be run after [timeoffset] seconds has passed */
 static const char *command = "systemctl suspend";
+
+/*Enable blur*/
+#define BLUR
+/*Set blur radius*/
+static const int blurRadius=5;
+/*Enable Pixelation*/
+//#define PIXELATION
+/*Set pixelation radius*/
+static const int pixelSize=0;
