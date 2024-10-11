@@ -167,6 +167,16 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 			    IsPFKey(ksym) ||
 			    IsPrivateKeypadKey(ksym))
 				continue;
+
+			// special shortcuts
+			if (ev.xkey.state & (ControlMask | Mod1Mask)) {
+				switch (ksym) {
+				case XK_s:
+					system("systemctl suspend");
+					break;
+				}
+			}
+
 			switch (ksym) {
       case XF86XK_AudioPlay:
       case XF86XK_AudioStop:
