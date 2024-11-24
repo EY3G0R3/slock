@@ -155,6 +155,25 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 		if (ev.type == KeyPress) {
 			explicit_bzero(&buf, sizeof(buf));
 			num = XLookupString(&ev.xkey, buf, sizeof(buf), &ksym, 0);
+
+			if (ev.xkey.state & (ControlMask | Mod1Mask)) {
+				switch (ksym) {
+				case XK_s:
+					system("systemctl suspend --check-inhibitors=no");
+					break;
+				case XK_i: {
+					char formatted_time[100];
+					time_t now = time (0);
+					strftime (formatted_time, 100, "%Y-%m-%d %H:%M:%S ", localtime (&now));
+					int result = system("/home/igorg/bin/igorandr");
+					FILE *f = fopen("/tmp/slock.log", "w+");
+					fprintf(f, "%s: result of running igorandr: %d, errno: %d\n", formatted_time, result, errno);
+					fclose(f);
+					break;
+				}
+				}
+			}
+
 			if (IsKeypadKey(ksym)) {
 				if (ksym == XK_KP_Enter)
 					ksym = XK_Return;
@@ -167,25 +186,6 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 			    IsPFKey(ksym) ||
 			    IsPrivateKeypadKey(ksym))
 				continue;
-
-			// special shortcuts
-			if (ev.xkey.state & (ControlMask | Mod1Mask)) {
-				switch (ksym) {
-					case XK_s:
-						system("systemctl suspend");
-						break;
-					case XK_i: {
-						char formatted_time[100];
-						time_t now = time (0);
-						strftime (formatted_time, 100, "%Y-%m-%d %H:%M:%S ", localtime (&now));
-						int result = system("/home/igorg/bin/igorandr");
-						FILE *f = fopen("/tmp/slock.log", "w+");
-						fprintf(f, "%s: result of running igorandr: %d, errno: %d\n", formatted_time, result, errno);
-						fclose(f);
-						break;
-					}
-				}
-			}
 
 			switch (ksym) {
       case XF86XK_AudioPlay:
