@@ -16,6 +16,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
 #include <X11/Xlib.h>
@@ -162,13 +164,40 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 					system("systemctl suspend --check-inhibitors=no");
 					break;
 				case XK_i: {
-					char formatted_time[100];
-					time_t now = time (0);
-					strftime (formatted_time, 100, "%Y-%m-%d %H:%M:%S ", localtime (&now));
-					int result = system("/home/igorg/bin/igorandr");
-					FILE *f = fopen("/tmp/slock.log", "w+");
-					fprintf(f, "%s: result of running igorandr: %d, errno: %d\n", formatted_time, result, errno);
-					fclose(f);
+					/* Ask igorandrd to retrain the display.
+					 *
+					 * This used to call igorandr directly, which
+					 * could never have worked: by this point main()
+					 * has dropped to nobody:nogroup, so we can
+					 * neither read .Xauthority to reach X nor even
+					 * traverse /home/igorg, which is 0750. Drop a
+					 * request into igorandrd's world-writable
+					 * directory instead and let the daemon, which
+					 * still holds the session user's X connection,
+					 * do the work.
+					 *
+					 * The file name is the request; igorandrd never
+					 * reads the contents. "retrain" in the name is
+					 * what selects the off/on modeset cycle rather
+					 * than a plain layout reassert -- reasserting an
+					 * already-active mode is a driver no-op, and is
+					 * exactly what fails to recover a dark screen.
+					 *
+					 * O_EXCL|O_NOFOLLOW because the directory is
+					 * shared: never write through a name someone
+					 * else planted. The counter keeps repeated
+					 * presses within one second distinct. */
+					static unsigned int retrain_seq;
+					char path[256];
+
+					snprintf(path, sizeof(path),
+					         "/tmp/igorandr-requests/slock-retrain.%d.%lu%u",
+					         (int)getpid(), (unsigned long)time(NULL),
+					         retrain_seq++);
+
+					int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0644);
+					if (fd >= 0)
+						close(fd);
 					break;
 				}
 				}
